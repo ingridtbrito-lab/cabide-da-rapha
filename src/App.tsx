@@ -396,63 +396,14 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111] flex items-center justify-center">
-      {/* iPhone frame */}
-      <div
-        className="relative flex flex-col bg-[#0a0a0a] overflow-hidden"
-        style={{
-          width: 393,
-          height: 852,
-          borderRadius: 55,
-          boxShadow: '0 0 0 2px #3a3a3c, 0 0 0 14px #1c1c1e, 0 0 0 16px #3a3a3c, 0 50px 100px rgba(0,0,0,0.9)',
-        }}
-      >
-        {/* iOS status bar */}
-        <div className="flex items-center justify-between px-8 bg-[#0a0a0a] flex-shrink-0" style={{ paddingTop: 14, paddingBottom: 6 }}>
-          <span className="text-[15px] font-semibold text-white" style={{ letterSpacing: '-0.3px' }}>9:41</span>
-          {/* Dynamic Island */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-3 bg-black rounded-full" style={{ width: 126, height: 37 }} />
-          {/* iOS status icons */}
-          <div className="flex items-center gap-[6px]">
-            {/* Signal bars */}
-            <svg width="17" height="12" viewBox="0 0 17 12" fill="white">
-              <rect x="0" y="4" width="3" height="8" rx="1" />
-              <rect x="4.5" y="2.5" width="3" height="9.5" rx="1" />
-              <rect x="9" y="1" width="3" height="11" rx="1" />
-              <rect x="13.5" y="0" width="3" height="12" rx="1" opacity="0.3" />
-            </svg>
-            {/* WiFi */}
-            <svg width="16" height="12" viewBox="0 0 16 12" fill="white">
-              <path d="M8 9.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
-              <path d="M8 6.5C9.9 6.5 11.6 7.3 12.8 8.5L11.4 9.9C10.5 9 9.3 8.5 8 8.5s-2.5.5-3.4 1.4L3.2 8.5C4.4 7.3 6.1 6.5 8 6.5z" />
-              <path d="M8 3C10.8 3 13.3 4.1 15.1 5.9L13.7 7.3C12.3 5.9 10.3 5 8 5S3.7 5.9 2.3 7.3L.9 5.9C2.7 4.1 5.2 3 8 3z" opacity="0.5" />
-            </svg>
-            {/* Battery */}
-            <div className="flex items-center">
-              <div className="relative flex items-center justify-end" style={{ width: 25, height: 12 }}>
-                <div className="absolute inset-0 rounded-[3px] border border-white/60" />
-                <div className="absolute left-[2px] top-[2px] bottom-[2px] right-[2px] bg-white rounded-[2px]" style={{ right: 3 }} />
-                <div className="absolute -right-[3px] top-[3.5px] w-[2px] h-[5px] bg-white/60 rounded-r-sm" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Conteúdo com scroll */}
-        <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-          {screen === 'inicio' && <TelaInicio transacoes={transacoes} onNav={setScreen} />}
-          {screen === 'venda' && <FormTransacao tipo="venda" onSubmit={addTransacao('venda')} />}
-          {screen === 'reembolso' && <FormTransacao tipo="reembolso" onSubmit={addTransacao('reembolso')} />}
-          {screen === 'historico' && <TelaHistorico transacoes={transacoes} />}
-        </div>
-
-        {/* Bottom nav */}
-        <BottomNav active={screen} onChange={setScreen} />
-        {/* iOS home indicator */}
-        <div className="flex justify-center pb-2 pt-1 bg-[#0a0a0a] flex-shrink-0">
-          <div className="w-32 h-1 bg-white/30 rounded-full" />
-        </div>
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+      <div className="flex-1 overflow-y-auto">
+        {screen === 'inicio' && <TelaInicio transacoes={transacoes} onNav={setScreen} />}
+        {screen === 'venda' && <FormTransacao tipo="venda" onSubmit={addTransacao('venda')} />}
+        {screen === 'reembolso' && <FormTransacao tipo="reembolso" onSubmit={addTransacao('reembolso')} />}
+        {screen === 'historico' && <TelaHistorico transacoes={transacoes} />}
       </div>
+      <BottomNav active={screen} onChange={setScreen} />
     </div>
   )
 }
