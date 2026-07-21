@@ -1,0 +1,10 @@
+{
+  "description": "Streamlines sales, refunds, and history tracking with organized mobile-friendly interfaces designed for efficient Instagram-based retail management.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
