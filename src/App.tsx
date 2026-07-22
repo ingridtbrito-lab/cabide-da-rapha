@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
-type Screen = 'inicio' | 'venda' | 'reembolso' | 'historico'
+type Screen = 'inicio' | 'venda' | 'reembolso' | 'historico' | 'saida'
 
 type Transacao = {
   id: string
-  tipo: 'venda' | 'reembolso'
-  instagram: string
-  quantidade: number
+  tipo: 'venda' | 'reembolso' | 'saida'
+  instagram?: string
+  quantidade?: number
   valor: number
   funcionaria: string
+  categoria?: string
+  descricao?: string
   data: Date
 }
 
@@ -40,21 +42,22 @@ function BottomNav({ active, onChange }: { active: Screen; onChange: (s: Screen)
   const items: { key: Screen; label: string; icon: string }[] = [
     { key: 'inicio', label: 'Início', icon: '⌂' },
     { key: 'venda', label: 'Venda', icon: '＋' },
-    { key: 'reembolso', label: 'Reembolso', icon: '↩' },
+    { key: 'saida', label: 'Saída', icon: '↓' },
+    { key: 'reembolso', label: 'Reemb.', icon: '↩' },
     { key: 'historico', label: 'Histórico', icon: '≡' },
   ]
   return (
     <nav style={{ borderTop: '1px solid #1e1e1e' }}
-      className="grid grid-cols-4 bg-[#0a0a0a] pb-safe">
+      className="grid grid-cols-5 bg-[#0a0a0a] pb-safe">
       {items.map(item => (
         <button
           key={item.key}
           onClick={() => onChange(item.key)}
-          className={`flex flex-col items-center gap-0.5 py-3 text-xs font-medium transition-colors ${
+          className={`flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
             active === item.key ? 'text-white' : 'text-zinc-600'
           }`}
         >
-          <span className={`text-xl leading-none transition-transform ${active === item.key ? 'scale-110' : ''}`}>
+          <span className={`text-lg leading-none transition-transform ${active === item.key ? 'scale-110' : ''}`}>
             {item.icon}
           </span>
           {item.label}
@@ -442,6 +445,152 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
   )
 }
 
+// ── Tela Saída de Caixa ───────────────────────────────────────────────────
+function TelaSaida({ onSubmit }: { onSubmit: (dados: any) => void }) {
+  const [funcionaria, setFuncionaria] = useState('')
+  const [categoria, setCategoria] = useState('')
+  const [descricao, setDescricao] = useState('')
+  const [valor, setValor] = useState('')
+  const [sucesso, setSucesso] = useState(false)
+
+  const categorias = ['Curadoria', 'Passagem', 'Mercado', 'Outros']
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!funcionaria || !categoria || !valor) return
+    if (categoria === 'Outros' && !descricao.trim()) return
+    onSubmit({
+      funcionaria,
+      categoria,
+      descricao: categoria === 'Outros' ? descricao : categoria,
+      valor: parseFloat(valor.replace(',', '.')),
+    })
+    setSucesso(true)
+    setFuncionaria('')
+    setCategoria('')
+    setDescricao('')
+    setValor('')
+    setTimeout(() => setSucesso(false), 2500)
+  }
+
+  const inputCls = "w-full rounded-xl bg-[#111] border border-[#2a2a2a] text-white text-sm px-4 py-3.5 outline-none focus:border-zinc-500 placeholder-zinc-600 transition-colors"
+  const labelCls = "text-xs text-zinc-500 uppercase tracking-wider font-medium mb-1.5"
+
+  return (
+    <div className="flex flex-col gap-5 p-5">
+      <div className="pt-2">
+        <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Despesa operacional</p>
+        <h1 className="text-2xl font-bold text-white mt-0.5">Saída de Caixa</h1>
+      </div>
+
+      {sucesso && (
+        <div className="rounded-xl px-4 py-3 text-sm font-medium bg-orange-400/10 text-orange-400 border border-orange-400/20">
+          ✓ Saída registrada com sucesso!
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Funcionária */}
+        <div>
+          <p className={labelCls}>Funcionária</p>
+          <div className="grid grid-cols-2 gap-2">
+            {FUNCIONARIAS.map(f => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFuncionaria(f)}
+                className={`rounded-xl py-3 text-sm font-medium transition-all border ${
+                  funcionaria === f
+                    ? 'bg-orange-400/10 text-orange-400 border-orange-400/30'
+                    : 'bg-[#111] text-zinc-400 border-[#2a2a2a]'
+                }`}
+              >
+                {f.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Categoria */}
+        <div>
+          <p className={labelCls}>Categoria</p>
+          <div className="grid grid-cols-2 gap-2">
+            {categorias.map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => { setCategoria(c); setDescricao('') }}
+                className={`rounded-xl py-3 text-sm font-medium transition-all border ${
+                  categoria === c
+                    ? 'bg-orange-400/10 text-orange-400 border-orange-400/30'
+                    : 'bg-[#111] text-zinc-400 border-[#2a2a2a]'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Descrição livre — só aparece se escolher Outros */}
+        {categoria === 'Outros' && (
+          <div>
+            <p className={labelCls}>Descrição</p>
+            <input
+              className={inputCls}
+              placeholder="Descreva a saída..."
+              value={descricao}
+              onChange={e => setDescricao(e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Valor */}
+        <div>
+          <p className={labelCls}>Valor (R$)</p>
+          <input
+            className={inputCls}
+            type="text"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={valor}
+            onChange={e => setValor(e.target.value)}
+          />
+        </div>
+
+        {/* Resumo */}
+        {funcionaria && categoria && valor && (categoria !== 'Outros' || descricao) && (
+          <div className="rounded-xl bg-[#111] border border-[#2a2a2a] px-4 py-4 flex flex-col gap-1.5">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-1">Resumo</p>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-400">Categoria</span>
+              <span className="text-white font-medium">{categoria === 'Outros' ? descricao : categoria}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-400">Valor</span>
+              <span className="font-bold text-orange-400">
+                -{fmt(parseFloat(valor.replace(',', '.')) || 0)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-400">Funcionária</span>
+              <span className="text-white font-medium">{funcionaria}</span>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="w-full rounded-xl py-4 text-sm font-bold transition-all active:scale-95 mt-1 bg-orange-400 text-black disabled:opacity-40"
+          disabled={!funcionaria || !categoria || !valor || (categoria === 'Outros' && !descricao.trim())}
+        >
+          Registrar Saída
+        </button>
+      </form>
+    </div>
+  )
+}
+
 // ── Tela de Login ─────────────────────────────────────────────────────────
 function TelaLogin({ onLogin }: { onLogin: () => void }) {
   const [senha, setSenha] = useState('')
@@ -546,6 +695,22 @@ export default function App() {
     setTransacoes(prev => [{ ...data, data: new Date(data.created_at) }, ...prev])
   }
 
+  const addSaida = async (dados: { funcionaria: string; categoria: string; descricao: string; valor: number }) => {
+    const { data, error } = await supabase
+      .from('transacoes')
+      .insert([{
+        tipo: 'saida',
+        funcionaria: dados.funcionaria,
+        categoria: dados.categoria,
+        descricao: dados.descricao,
+        valor: -dados.valor,
+      }])
+      .select()
+      .single()
+    if (error) { console.error('Erro ao salvar:', error); return }
+    setTransacoes(prev => [{ ...data, data: new Date(data.created_at) }, ...prev])
+  }
+
   if (!autenticado) {
     return <TelaLogin onLogin={() => setAutenticado(true)} />
   }
@@ -567,6 +732,7 @@ export default function App() {
         {screen === 'inicio' && <TelaInicio transacoes={transacoes} onNav={setScreen} />}
         {screen === 'venda' && <FormTransacao tipo="venda" onSubmit={addTransacao('venda')} />}
         {screen === 'reembolso' && <FormTransacao tipo="reembolso" onSubmit={addTransacao('reembolso')} />}
+        {screen === 'saida' && <TelaSaida onSubmit={addSaida} />}
         {screen === 'historico' && <TelaHistorico transacoes={transacoes} />}
       </div>
       <BottomNav active={screen} onChange={setScreen} />
