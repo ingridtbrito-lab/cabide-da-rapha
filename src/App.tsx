@@ -72,9 +72,11 @@ function TelaInicio({ transacoes, onNav }: { transacoes: Transacao[]; onNav: (s:
   const hoje = new Date()
   const vendas = transacoes.filter(t => t.tipo === 'venda' && t.data.toDateString() === hoje.toDateString())
   const reembolsos = transacoes.filter(t => t.tipo === 'reembolso' && t.data.toDateString() === hoje.toDateString())
+  const saidas = transacoes.filter(t => t.tipo === 'saida' && t.data.toDateString() === hoje.toDateString())
   const totalVendas = vendas.reduce((a, t) => a + t.valor, 0)
-  const totalReembolsos = reembolsos.reduce((a, t) => a + t.valor, 0)
-  const caixa = totalVendas - totalReembolsos
+  const totalReembolsos = reembolsos.reduce((a, t) => a + Math.abs(t.valor), 0)
+  const totalSaidas = saidas.reduce((a, t) => a + Math.abs(t.valor), 0)
+  const caixa = totalVendas - totalReembolsos - totalSaidas
   const recentes = [...transacoes].sort((a, b) => b.data.getTime() - a.data.getTime()).slice(0, 3)
 
   return (
@@ -82,10 +84,12 @@ function TelaInicio({ transacoes, onNav }: { transacoes: Transacao[]; onNav: (s:
       {/* Header */}
       <div className="flex items-start justify-between pt-2">
         <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Segunda, 21 Jul</p>
+          <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">
+            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' })}
+          </p>
           <h1 className="text-2xl font-bold text-white mt-0.5">Painel</h1>
         </div>
-        <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-300">L</div>
+        <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-300">C</div>
       </div>
 
       {/* Caixa */}
@@ -96,28 +100,37 @@ function TelaInicio({ transacoes, onNav }: { transacoes: Transacao[]; onNav: (s:
       </div>
 
       {/* Cards métricas */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-[#111] p-4 border border-[#1e1e1e]">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider">Vendas</p>
-          <p className="text-2xl font-bold text-green-400 mt-1">{fmt(totalVendas)}</p>
-          <p className="text-xs text-zinc-600 mt-1">{vendas.length} pedidos</p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl bg-[#111] p-3 border border-[#1e1e1e]">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Vendas</p>
+          <p className="text-lg font-bold text-green-400 mt-1">{fmt(totalVendas)}</p>
+          <p className="text-[10px] text-zinc-600 mt-1">{vendas.length} pedidos</p>
         </div>
-        <div className="rounded-xl bg-[#111] p-4 border border-[#1e1e1e]">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider">Reembolsos</p>
-          <p className="text-2xl font-bold text-red-400 mt-1">{fmt(totalReembolsos)}</p>
-          <p className="text-xs text-zinc-600 mt-1">{reembolsos.length} devoluç{reembolsos.length !== 1 ? 'ões' : 'ão'}</p>
+        <div className="rounded-xl bg-[#111] p-3 border border-[#1e1e1e]">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Reembolsos</p>
+          <p className="text-lg font-bold text-red-400 mt-1">{fmt(totalReembolsos)}</p>
+          <p className="text-[10px] text-zinc-600 mt-1">{reembolsos.length} devol.</p>
+        </div>
+        <div className="rounded-xl bg-[#111] p-3 border border-[#1e1e1e]">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Saídas</p>
+          <p className="text-lg font-bold text-orange-400 mt-1">{fmt(totalSaidas)}</p>
+          <p className="text-[10px] text-zinc-600 mt-1">{saidas.length} lançam.</p>
         </div>
       </div>
 
       {/* Ações rápidas */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         <button onClick={() => onNav('venda')}
-          className="rounded-xl py-3.5 text-sm font-semibold text-black bg-green-400 active:scale-95 transition-transform">
-          + Nova Venda
+          className="rounded-xl py-3 text-xs font-semibold text-black bg-green-400 active:scale-95 transition-transform">
+          + Venda
+        </button>
+        <button onClick={() => onNav('saida')}
+          className="rounded-xl py-3 text-xs font-semibold text-white bg-orange-400/20 border border-orange-400/30 text-orange-400 active:scale-95 transition-transform">
+          ↓ Saída
         </button>
         <button onClick={() => onNav('reembolso')}
-          className="rounded-xl py-3.5 text-sm font-semibold text-white bg-[#1e1e1e] border border-[#2a2a2a] active:scale-95 transition-transform">
-          ↩ Reembolso
+          className="rounded-xl py-3 text-xs font-semibold text-white bg-[#1e1e1e] border border-[#2a2a2a] active:scale-95 transition-transform">
+          ↩ Reemb.
         </button>
       </div>
 
@@ -128,22 +141,33 @@ function TelaInicio({ transacoes, onNav }: { transacoes: Transacao[]; onNav: (s:
           <button onClick={() => onNav('historico')} className="text-xs text-zinc-500">Ver tudo</button>
         </div>
         <div className="flex flex-col gap-2">
+          {recentes.length === 0 && (
+            <div className="text-center py-8 text-zinc-600 text-sm">Nenhuma transação ainda</div>
+          )}
           {recentes.map(t => (
             <div key={t.id} className="flex items-center justify-between rounded-xl bg-[#111] px-4 py-3 border border-[#1e1e1e]">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                  t.tipo === 'venda' ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'
+                  t.tipo === 'venda' ? 'bg-green-400/10 text-green-400' :
+                  t.tipo === 'reembolso' ? 'bg-red-400/10 text-red-400' :
+                  'bg-orange-400/10 text-orange-400'
                 }`}>
-                  {t.tipo === 'venda' ? '↑' : '↓'}
+                  {t.tipo === 'venda' ? '↑' : t.tipo === 'reembolso' ? '↩' : '↓'}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">{t.instagram}</p>
+                  <p className="text-sm font-medium text-white">
+                    {t.tipo === 'saida' ? (t.descricao || t.categoria) : t.instagram}
+                  </p>
                   <p className="text-xs text-zinc-500">{t.funcionaria}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-sm font-semibold ${t.tipo === 'venda' ? 'text-green-400' : 'text-red-400'}`}>
-                  {t.tipo === 'reembolso' ? '-' : '+'}{fmt(t.valor)}
+                <p className={`text-sm font-semibold ${
+                  t.tipo === 'venda' ? 'text-green-400' :
+                  t.tipo === 'reembolso' ? 'text-red-400' :
+                  'text-orange-400'
+                }`}>
+                  {t.tipo === 'venda' ? '+' : '-'}{fmt(Math.abs(t.valor))}
                 </p>
                 <p className="text-xs text-zinc-600">{fmtHora(t.data)}</p>
               </div>
@@ -313,14 +337,12 @@ function FormTransacao({
 
 // ── Tela Histórico ────────────────────────────────────────────────────────
 function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
-  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'venda' | 'reembolso'>('todos')
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'venda' | 'reembolso' | 'saida'>('todos')
   const [filtroPeriodo, setFiltroPeriodo] = useState<'hoje' | 'semana' | 'mes'>('hoje')
 
   function getInicio(periodo: 'hoje' | 'semana' | 'mes') {
     const agora = new Date()
-    if (periodo === 'hoje') {
-      return new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
-    }
+    if (periodo === 'hoje') return new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
     if (periodo === 'semana') {
       const dia = agora.getDay()
       const diff = agora.getDate() - dia + (dia === 0 ? -6 : 1)
@@ -337,14 +359,22 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
     return dentroDoTipo && dentroDoPeriodo
   })
 
-  const total = filtradas.reduce((a, t) => t.tipo === 'venda' ? a + t.valor : a - t.valor, 0)
   const totalVendas = filtradas.filter(t => t.tipo === 'venda').reduce((a, t) => a + t.valor, 0)
-  const totalReembolsos = filtradas.filter(t => t.tipo === 'reembolso').reduce((a, t) => a + t.valor, 0)
+  const totalReembolsos = filtradas.filter(t => t.tipo === 'reembolso').reduce((a, t) => a + Math.abs(t.valor), 0)
+  const totalSaidas = filtradas.filter(t => t.tipo === 'saida').reduce((a, t) => a + Math.abs(t.valor), 0)
+  const total = totalVendas - totalReembolsos - totalSaidas
 
   const periodos = [
     { key: 'hoje', label: 'Hoje' },
     { key: 'semana', label: 'Semana' },
     { key: 'mes', label: 'Mês' },
+  ] as const
+
+  const tipos = [
+    { key: 'todos', label: 'Todos' },
+    { key: 'venda', label: 'Vendas' },
+    { key: 'reembolso', label: 'Reemb.' },
+    { key: 'saida', label: 'Saídas' },
   ] as const
 
   return (
@@ -357,15 +387,12 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
       {/* Filtro período */}
       <div className="flex gap-2">
         {periodos.map(p => (
-          <button
-            key={p.key}
-            onClick={() => setFiltroPeriodo(p.key)}
+          <button key={p.key} onClick={() => setFiltroPeriodo(p.key)}
             className={`flex-1 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border ${
               filtroPeriodo === p.key
                 ? 'bg-white/10 text-white border-white/20'
                 : 'bg-[#111] text-zinc-500 border-[#1e1e1e]'
-            }`}
-          >
+            }`}>
             {p.label}
           </button>
         ))}
@@ -373,26 +400,22 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
 
       {/* Filtro tipo */}
       <div className="flex gap-2">
-        {(['todos', 'venda', 'reembolso'] as const).map(f => (
-          <button
-            key={f}
-            onClick={() => setFiltroTipo(f)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border ${
-              filtroTipo === f
-                ? f === 'venda'
-                  ? 'bg-green-400/10 text-green-400 border-green-400/30'
-                  : f === 'reembolso'
-                  ? 'bg-red-400/10 text-red-400 border-red-400/30'
-                  : 'bg-white/10 text-white border-white/20'
+        {tipos.map(f => (
+          <button key={f.key} onClick={() => setFiltroTipo(f.key)}
+            className={`flex-1 py-2 rounded-xl text-[10px] font-semibold uppercase tracking-wider transition-all border ${
+              filtroTipo === f.key
+                ? f.key === 'venda' ? 'bg-green-400/10 text-green-400 border-green-400/30'
+                : f.key === 'reembolso' ? 'bg-red-400/10 text-red-400 border-red-400/30'
+                : f.key === 'saida' ? 'bg-orange-400/10 text-orange-400 border-orange-400/30'
+                : 'bg-white/10 text-white border-white/20'
                 : 'bg-[#111] text-zinc-500 border-[#1e1e1e]'
-            }`}
-          >
-            {f === 'todos' ? 'Todos' : f === 'venda' ? 'Vendas' : 'Reemb.'}
+            }`}>
+            {f.label}
           </button>
         ))}
       </div>
 
-      {/* Resumo do período */}
+      {/* Resumo */}
       <div className="rounded-xl bg-[#111] border border-[#1e1e1e] px-4 py-3 flex flex-col gap-1">
         <div className="flex justify-between items-center">
           <span className="text-xs text-zinc-500 uppercase tracking-wider">{filtradas.length} transações</span>
@@ -400,40 +423,45 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
             {total >= 0 ? '+' : ''}{fmt(total)}
           </span>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-zinc-600">Vendas</span>
-          <span className="text-xs text-green-400 font-medium">{fmt(totalVendas)}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-zinc-600">Reembolsos</span>
-          <span className="text-xs text-red-400 font-medium">{fmt(totalReembolsos)}</span>
-        </div>
+        <div className="flex justify-between"><span className="text-xs text-zinc-600">Vendas</span><span className="text-xs text-green-400 font-medium">{fmt(totalVendas)}</span></div>
+        <div className="flex justify-between"><span className="text-xs text-zinc-600">Reembolsos</span><span className="text-xs text-red-400 font-medium">-{fmt(totalReembolsos)}</span></div>
+        <div className="flex justify-between"><span className="text-xs text-zinc-600">Saídas</span><span className="text-xs text-orange-400 font-medium">-{fmt(totalSaidas)}</span></div>
       </div>
 
       {/* Lista */}
       <div className="flex flex-col gap-2">
         {filtradas.length === 0 && (
-          <div className="text-center py-10 text-zinc-600 text-sm">
-            Nenhuma transação neste período
-          </div>
+          <div className="text-center py-10 text-zinc-600 text-sm">Nenhuma transação neste período</div>
         )}
         {filtradas.map(t => (
           <div key={t.id} className="rounded-xl bg-[#111] border border-[#1e1e1e] px-4 py-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base ${
-                  t.tipo === 'venda' ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'
+                  t.tipo === 'venda' ? 'bg-green-400/10 text-green-400' :
+                  t.tipo === 'reembolso' ? 'bg-red-400/10 text-red-400' :
+                  'bg-orange-400/10 text-orange-400'
                 }`}>
-                  {t.tipo === 'venda' ? '↑' : '↓'}
+                  {t.tipo === 'venda' ? '↑' : t.tipo === 'reembolso' ? '↩' : '↓'}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">{t.instagram}</p>
-                  <p className="text-xs text-zinc-500">{t.funcionaria} · {t.quantidade} peça{t.quantidade !== 1 ? 's' : ''}</p>
+                  <p className="text-sm font-semibold text-white">
+                    {t.tipo === 'saida' ? (t.descricao || t.categoria) : t.instagram}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    {t.funcionaria}
+                    {t.tipo !== 'saida' && ` · ${t.quantidade} peça${t.quantidade !== 1 ? 's' : ''}`}
+                    {t.tipo === 'saida' && t.categoria ? ` · ${t.categoria}` : ''}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-sm font-bold ${t.tipo === 'venda' ? 'text-green-400' : 'text-red-400'}`}>
-                  {t.tipo === 'reembolso' ? '-' : '+'}{fmt(t.valor)}
+                <p className={`text-sm font-bold ${
+                  t.tipo === 'venda' ? 'text-green-400' :
+                  t.tipo === 'reembolso' ? 'text-red-400' :
+                  'text-orange-400'
+                }`}>
+                  {t.tipo === 'venda' ? '+' : '-'}{fmt(Math.abs(t.valor))}
                 </p>
                 <p className="text-xs text-zinc-600">{fmtData(t.data)}</p>
               </div>
