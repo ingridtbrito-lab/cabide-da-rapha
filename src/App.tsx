@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from './supabase'
 
 type Screen = 'inicio' | 'venda' | 'reembolso' | 'historico'
 
@@ -384,15 +385,58 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
 // ── App principal ─────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState<Screen>('inicio')
-  const [transacoes, setTransacoes] = useState<Transacao[]>(TRANSACOES_INICIAIS)
+  const [transacoes, setTransacoes] = useState<Transacao[]>([])
+  const [carregando, setCarregando] = useState(true)
 
-  const addTransacao = (tipo: 'venda' | 'reembolso') => (dados: Omit<Transacao, 'id' | 'data' | 'tipo'>) => {
+  // Busca todas as transações do banco ao abrir o app
+  useEffect(() => {
+    async function carregar() {
+      const { data, error } = await supabase
+        .from('transacoes')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Erro ao carregar:', error)
+      } else {
+        const formatadas = data.map((t: any) => ({
+          ...t,
+          data: new Date(t.created_at),
+        }))
+        setTransacoes(formatadas)
+      }
+      setCarregando(false)
+    }
+    carregar()
+  }, [])
+
+  const addTransacao = (tipo: 'venda' | 'reembolso') => async (dados: Omit<Transacao, 'id' | 'data' | 'tipo'>) => {
+    const { data, error } = await supabase
+      .from('transacoes')
+      .insert([{ tipo, ...dados }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Erro ao salvar:', error)
+      return
+    }
+
     setTransacoes(prev => [{
-      ...dados,
-      id: String(Date.now()),
-      tipo,
-      data: new Date(),
+      ...data,
+      data: new Date(data.created_at),
     }, ...prev])
+  }
+
+  if (carregando) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-zinc-500 text-sm">Carregando...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
