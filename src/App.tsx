@@ -310,11 +310,39 @@ function FormTransacao({
 
 // ── Tela Histórico ────────────────────────────────────────────────────────
 function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
-  const [filtro, setFiltro] = useState<'todos' | 'venda' | 'reembolso'>('todos')
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'venda' | 'reembolso'>('todos')
+  const [filtroPeriodo, setFiltroPeriodo] = useState<'hoje' | 'semana' | 'mes'>('hoje')
+
+  function getInicio(periodo: 'hoje' | 'semana' | 'mes') {
+    const agora = new Date()
+    if (periodo === 'hoje') {
+      return new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
+    }
+    if (periodo === 'semana') {
+      const dia = agora.getDay()
+      const diff = agora.getDate() - dia + (dia === 0 ? -6 : 1)
+      return new Date(agora.getFullYear(), agora.getMonth(), diff)
+    }
+    return new Date(agora.getFullYear(), agora.getMonth(), 1)
+  }
+
+  const inicio = getInicio(filtroPeriodo)
   const ordenadas = [...transacoes].sort((a, b) => b.data.getTime() - a.data.getTime())
-  const filtradas = ordenadas.filter(t => filtro === 'todos' || t.tipo === filtro)
+  const filtradas = ordenadas.filter(t => {
+    const dentroDoTipo = filtroTipo === 'todos' || t.tipo === filtroTipo
+    const dentroDoPeriodo = t.data >= inicio
+    return dentroDoTipo && dentroDoPeriodo
+  })
 
   const total = filtradas.reduce((a, t) => t.tipo === 'venda' ? a + t.valor : a - t.valor, 0)
+  const totalVendas = filtradas.filter(t => t.tipo === 'venda').reduce((a, t) => a + t.valor, 0)
+  const totalReembolsos = filtradas.filter(t => t.tipo === 'reembolso').reduce((a, t) => a + t.valor, 0)
+
+  const periodos = [
+    { key: 'hoje', label: 'Hoje' },
+    { key: 'semana', label: 'Semana' },
+    { key: 'mes', label: 'Mês' },
+  ] as const
 
   return (
     <div className="flex flex-col gap-4 p-5">
@@ -323,14 +351,31 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
         <h1 className="text-2xl font-bold text-white mt-0.5">Histórico</h1>
       </div>
 
-      {/* Filtros */}
+      {/* Filtro período */}
+      <div className="flex gap-2">
+        {periodos.map(p => (
+          <button
+            key={p.key}
+            onClick={() => setFiltroPeriodo(p.key)}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border ${
+              filtroPeriodo === p.key
+                ? 'bg-white/10 text-white border-white/20'
+                : 'bg-[#111] text-zinc-500 border-[#1e1e1e]'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtro tipo */}
       <div className="flex gap-2">
         {(['todos', 'venda', 'reembolso'] as const).map(f => (
           <button
             key={f}
-            onClick={() => setFiltro(f)}
+            onClick={() => setFiltroTipo(f)}
             className={`flex-1 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all border ${
-              filtro === f
+              filtroTipo === f
                 ? f === 'venda'
                   ? 'bg-green-400/10 text-green-400 border-green-400/30'
                   : f === 'reembolso'
@@ -344,16 +389,31 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
         ))}
       </div>
 
-      {/* Saldo filtrado */}
-      <div className="rounded-xl bg-[#111] border border-[#1e1e1e] px-4 py-3 flex justify-between items-center">
-        <span className="text-xs text-zinc-500 uppercase tracking-wider">{filtradas.length} transações</span>
-        <span className={`text-sm font-bold ${total >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          {total >= 0 ? '+' : ''}{fmt(total)}
-        </span>
+      {/* Resumo do período */}
+      <div className="rounded-xl bg-[#111] border border-[#1e1e1e] px-4 py-3 flex flex-col gap-1">
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-zinc-500 uppercase tracking-wider">{filtradas.length} transações</span>
+          <span className={`text-sm font-bold ${total >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {total >= 0 ? '+' : ''}{fmt(total)}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-zinc-600">Vendas</span>
+          <span className="text-xs text-green-400 font-medium">{fmt(totalVendas)}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-zinc-600">Reembolsos</span>
+          <span className="text-xs text-red-400 font-medium">{fmt(totalReembolsos)}</span>
+        </div>
       </div>
 
       {/* Lista */}
       <div className="flex flex-col gap-2">
+        {filtradas.length === 0 && (
+          <div className="text-center py-10 text-zinc-600 text-sm">
+            Nenhuma transação neste período
+          </div>
+        )}
         {filtradas.map(t => (
           <div key={t.id} className="rounded-xl bg-[#111] border border-[#1e1e1e] px-4 py-3.5">
             <div className="flex items-center justify-between">
