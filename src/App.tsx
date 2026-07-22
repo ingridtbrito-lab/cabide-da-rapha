@@ -12,6 +12,7 @@ type Transacao = {
   funcionaria: string
   categoria?: string
   descricao?: string
+  pagamento?: string
   data: Date
 }
 
@@ -191,6 +192,7 @@ function FormTransacao({
   const [quantidade, setQuantidade] = useState('')
   const [valor, setValor] = useState('')
   const [funcionaria, setFuncionaria] = useState('')
+  const [pagamento, setPagamento] = useState('')
   const [sucesso, setSucesso] = useState(false)
 
   const isVenda = tipo === 'venda'
@@ -199,18 +201,20 @@ function FormTransacao({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!instagram || !quantidade || !valor || !funcionaria) return
+    if (!instagram || !quantidade || !valor || !funcionaria || !pagamento) return
     onSubmit({
       instagram: instagram.startsWith('@') ? instagram : `@${instagram}`,
       quantidade: Number(quantidade),
       valor: parseFloat(valor.replace(',', '.')),
       funcionaria,
+      pagamento,
     })
     setSucesso(true)
     setInstagram('')
     setQuantidade('')
     setValor('')
     setFuncionaria('')
+    setPagamento('')
     setTimeout(() => setSucesso(false), 2500)
   }
 
@@ -294,8 +298,31 @@ function FormTransacao({
           </div>
         </div>
 
+        {/* Pagamento */}
+        <div>
+          <p className={labelCls}>Forma de pagamento</p>
+          <div className="grid grid-cols-2 gap-2">
+            {['Pix', 'Link', 'Cartão', 'Dinheiro'].map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPagamento(p)}
+                className={`rounded-xl py-3 text-sm font-medium transition-all border ${
+                  pagamento === p
+                    ? cor === 'green'
+                      ? 'bg-green-400/10 text-green-400 border-green-400/30'
+                      : 'bg-red-400/10 text-red-400 border-red-400/30'
+                    : 'bg-[#111] text-zinc-400 border-[#2a2a2a]'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Resumo */}
-        {instagram && quantidade && valor && funcionaria && (
+        {instagram && quantidade && valor && funcionaria && pagamento && (
           <div className="rounded-xl bg-[#111] border border-[#2a2a2a] px-4 py-4 flex flex-col gap-1.5">
             <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-1">Resumo</p>
             <div className="flex justify-between text-sm">
@@ -306,16 +333,24 @@ function FormTransacao({
               <span className="text-zinc-400">Peças</span>
               <span className="text-white font-medium">{quantidade}</span>
             </div>
+            
             <div className="flex justify-between text-sm">
               <span className="text-zinc-400">Valor</span>
               <span className={`font-bold ${isVenda ? 'text-green-400' : 'text-red-400'}`}>
                 {fmt(parseFloat(valor.replace(',', '.')) || 0)}
               </span>
             </div>
+
             <div className="flex justify-between text-sm">
               <span className="text-zinc-400">Funcionária</span>
               <span className="text-white font-medium">{funcionaria}</span>
             </div>
+
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-400">Pagamento</span>
+              <span className="text-white font-medium">{pagamento}</span>
+            </div>
+
           </div>
         )}
 
@@ -326,7 +361,7 @@ function FormTransacao({
               ? 'bg-green-400 text-black'
               : 'bg-red-500 text-white'
           } disabled:opacity-40`}
-          disabled={!instagram || !quantidade || !valor || !funcionaria}
+          disabled={!instagram || !quantidade || !valor || !funcionaria || !pagamento}
         >
           {tituloBtn}
         </button>
@@ -451,6 +486,7 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
                   <p className="text-xs text-zinc-500">
                     {t.funcionaria}
                     {t.tipo !== 'saida' && ` · ${t.quantidade} peça${t.quantidade !== 1 ? 's' : ''}`}
+                    {t.tipo === 'venda' && t.pagamento ? ` · ${t.pagamento}` : ''}
                     {t.tipo === 'saida' && t.categoria ? ` · ${t.categoria}` : ''}
                   </p>
                 </div>
