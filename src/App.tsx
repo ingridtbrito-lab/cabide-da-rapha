@@ -442,33 +442,99 @@ function TelaHistorico({ transacoes }: { transacoes: Transacao[] }) {
   )
 }
 
+// ── Tela de Login ─────────────────────────────────────────────────────────
+function TelaLogin({ onLogin }: { onLogin: () => void }) {
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState(false)
+  const [tentando, setTentando] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setTentando(true)
+    setTimeout(() => {
+      if (senha === import.meta.env.VITE_APP_PASSWORD) {
+        localStorage.setItem('cabide_auth', 'true')
+        onLogin()
+      } else {
+        setErro(true)
+        setSenha('')
+      }
+      setTentando(false)
+    }, 600)
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-8">
+      <div className="w-full max-w-sm flex flex-col items-center gap-8">
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-20 h-20 rounded-2xl bg-[#111] border border-[#2a2a2a] flex items-center justify-center">
+            <span className="text-3xl">👗</span>
+          </div>
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-white">Cabide da Rapha</h1>
+            <p className="text-xs text-zinc-500 mt-1">Sistema de vendas</p>
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+          <div>
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-2">Senha de acesso</p>
+            <input
+              type="password"
+              className="w-full rounded-xl bg-[#111] border border-[#2a2a2a] text-white text-sm px-4 py-4 outline-none focus:border-zinc-500 placeholder-zinc-600 transition-colors text-center tracking-widest text-lg"
+              placeholder="••••••••"
+              value={senha}
+              onChange={e => { setSenha(e.target.value); setErro(false) }}
+              autoFocus
+            />
+          </div>
+
+          {erro && (
+            <div className="rounded-xl bg-red-400/10 border border-red-400/20 px-4 py-3 text-sm text-red-400 text-center">
+              Senha incorreta. Tente novamente.
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={!senha || tentando}
+            className="w-full rounded-xl py-4 text-sm font-bold bg-green-400 text-black disabled:opacity-40 transition-all active:scale-95"
+          >
+            {tentando ? 'Verificando...' : 'Entrar'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── App principal ─────────────────────────────────────────────────────────
 export default function App() {
+  const [autenticado, setAutenticado] = useState(
+    localStorage.getItem('cabide_auth') === 'true'
+  )
   const [screen, setScreen] = useState<Screen>('inicio')
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [carregando, setCarregando] = useState(true)
 
-  // Busca todas as transações do banco ao abrir o app
   useEffect(() => {
+    if (!autenticado) { setCarregando(false); return }
     async function carregar() {
       const { data, error } = await supabase
         .from('transacoes')
         .select('*')
         .order('created_at', { ascending: false })
-
       if (error) {
         console.error('Erro ao carregar:', error)
       } else {
-        const formatadas = data.map((t: any) => ({
-          ...t,
-          data: new Date(t.created_at),
-        }))
-        setTransacoes(formatadas)
+        setTransacoes(data.map((t: any) => ({ ...t, data: new Date(t.created_at) })))
       }
       setCarregando(false)
     }
     carregar()
-  }, [])
+  }, [autenticado])
 
   const addTransacao = (tipo: 'venda' | 'reembolso') => async (dados: Omit<Transacao, 'id' | 'data' | 'tipo'>) => {
     const { data, error } = await supabase
@@ -476,16 +542,12 @@ export default function App() {
       .insert([{ tipo, ...dados }])
       .select()
       .single()
+    if (error) { console.error('Erro ao salvar:', error); return }
+    setTransacoes(prev => [{ ...data, data: new Date(data.created_at) }, ...prev])
+  }
 
-    if (error) {
-      console.error('Erro ao salvar:', error)
-      return
-    }
-
-    setTransacoes(prev => [{
-      ...data,
-      data: new Date(data.created_at),
-    }, ...prev])
+  if (!autenticado) {
+    return <TelaLogin onLogin={() => setAutenticado(true)} />
   }
 
   if (carregando) {
